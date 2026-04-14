@@ -1,60 +1,40 @@
-# Voice-Controlled Local AI Agent
-
-This project implements the assignment from `Mem0_ AI_ML & Generative AI Developer Intern Assignment.pdf`: a voice-driven AI agent that accepts audio, transcribes speech, classifies the user's intent, safely executes local actions inside `output/`, and shows the full pipeline in a Streamlit UI.
-
-## Assignment status
-
-Requirement-by-requirement status against the PDF:
-
-- Audio input from microphone: satisfied
-- Audio file upload: satisfied
-- Speech-to-text: satisfied through OpenAI or Groq API-based STT
-- Local or API STT note in README: satisfied
-- Intent understanding with LLM: satisfied through Ollama, OpenAI, or Groq
-- Minimum supported intents:
-  - create file: satisfied
-  - write code to new or existing file: satisfied
-  - summarize text: satisfied
-  - general chat: satisfied
-- Tool execution for local file operations: satisfied
-- Create files or folders inside sandboxed `output/`: satisfied
-- Code generation saved directly to file: satisfied
-- Text summarization: satisfied
-- UI shows transcription: satisfied
-- UI shows detected intent: satisfied
-- UI shows action taken: satisfied
-- UI shows final output/result: satisfied
-- Safety constraint restricting file writes to `output/`: satisfied
-- Human-in-the-loop confirmation for file operations: implemented as a bonus
-- Session history / memory within session: implemented as a bonus
-
 Items not included in the codebase because they are submission deliverables rather than runtime features:
 
-- Public GitHub repository link
 - 2 to 3 minute demo video
-- Technical article
 - Final form submission
 
-## What this app does
+# Voice-Controlled Local AI Agent
 
-- Accepts audio from either:
-  - microphone recording inside the Streamlit UI
-  - uploaded audio files such as `.wav`, `.mp3`, and `.m4a`
-- Transcribes speech to text
-- Detects one of the supported intents:
-  - create file
-  - create folder
-  - write code
-  - summarize text
-  - general chat
-- Executes file actions only inside the `output/` directory
-- Shows:
-  - transcription
-  - detected intent
-  - action taken
-  - final output
-- Requires confirmation before file-writing operations
-- Stores session history in the current UI session
+A local AI agent that accepts voice input, understands user intent using LLMs, and executes real actions like file creation, code generation, summarization, and general chat — all through a clean UI.
+
+---
+
+## Features
+
+- Voice Input (supports both microphone and audio file upload )
+- Intent Detection using LLM (Ollama - Local)
+- Speech-to-Text using Groq API (openai is also supported !)
+- Tool Execution (only in the output folder !) :
+  - Create files/folders
+  - Write code to files
+  - Summarize text
+  - General chat
+- Human-in-the-loop confirmation before file operations (LLM asks permission to confirm the operation)
+- Session memory (persists until app reload)
+- Streamlit UI displays :
+  - Transcription
+  - Intent
+  - Action
+  - Output
+
+
+
+
+
+---
+
+
+
 
 ## Project structure
 
@@ -67,6 +47,15 @@ Items not included in the codebase because they are submission deliverables rath
 - `output/`: sandboxed folder for generated files
 - `tests/`: automated edge-case tests
 
+---
+
+## Architecture
+
+
+Audio Input → STT (Groq) → LLM (Ollama) → Intent JSON → Tool Execution → UI Output
+
+---
+
 ## Before you start
 
 You need:
@@ -76,6 +65,12 @@ You need:
 - A terminal opened in this project folder
 - At least one working STT provider
 - At least one working LLM provider
+
+Note : I am using linux terminal (wsl) and if you are working on windows or mac try to find suitable
+       commands.
+ 
+
+---
 
 This app supports these providers:
 
@@ -87,147 +82,70 @@ This app supports these providers:
   - OpenAI
   - Groq
 
-## Recommended setup paths
+## setup instructions for STT and LLM
 
-Choose one of these before running the app.
+Choose one of the providers above before setting to move forward smoothly.
 
-### Option 1: easiest overall
+Note : don't use .env.example directly as it results to fail to run the app !  
+       copy the contents of the `.env.example` in to a new file `.env` and place your
+       secret api_keys in the required places in the `.env` file.
+
+### option 1: easiest overall
 
 Use APIs for both STT and LLM.
 
-- `STT_PROVIDER=openai`
+- `STT_PROVIDER=openai` (similarly for `groq`)
 - `LLM_PROVIDER=openai`
 - requires:
-  - `OPENAI_API_KEY`
+  - `OPENAI_API_KEY` (or `GROQ_API_KEY` )
 
 ### Option 2: local-ish setup
 
 Use OpenAI for speech-to-text and Ollama for intent classification.
 
-- `STT_PROVIDER=openai`
+- `STT_PROVIDER=openai` (or `groq`)
 - `LLM_PROVIDER=ollama`
 - requires:
-  - `OPENAI_API_KEY`
+  - `OPENAI_API_KEY` (or `GROQ_API_KEY` )
   - Ollama running locally
   - model pulled locally, for example `llama3.1:8b`
 
-### Option 3: Groq-based setup
+---
 
-Use Groq where possible.
 
-- `STT_PROVIDER=groq`
-- `LLM_PROVIDER=groq`
-- requires:
-  - `GROQ_API_KEY`
+## Setup Instructions
 
-## Exact setup steps
+### 1. Create Virtual Environment (Conda)
 
-Follow these steps in order.
+Note : if you don't have conda in your PC use `python3 -m venv .venv` and activate it
+        `source .venv/bin/activate` or you can install it by following the official documentation.
 
-### 1. Open the project folder
-
-If you are using WSL:
+# if you have conda proceed below steps
+      
+```bash
+conda create -n voice-agent python=3.10
+```
 
 ```bash
-cd /home/laksh/projects/overbase
+conda activate voice-agent
 ```
 
-### 2. Create a virtual environment
+`you should be able to see (voice-agent) or (.venv) at the left of your terminal instead of (base) or nothing.`
 
-```bash
-python3 -m venv .venv
-```
 
-If `python3` does not work, try:
-
-```bash
-python -m venv .venv
-```
-
-### 3. Activate the virtual environment
-
-On Linux / WSL / macOS:
-
-```bash
-source .venv/bin/activate
-```
-
-On Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-After activation, your terminal should show something like `(.venv)`.
-
-### 4. Install dependencies
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 5. Create your `.env` file
+### 3. Create your `.env` file
 
-On Linux / WSL / macOS:
 
 ```bash
 cp .env.example .env
 ```
 
-On Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-### 6. Fill in `.env`
-
-Start from this template:
-
-```env
-OPENAI_API_KEY=
-GROQ_API_KEY=
-STT_PROVIDER=openai
-LLM_PROVIDER=ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1:8b
-OPENAI_MODEL=gpt-4o-mini
-GROQ_MODEL=llama-3.1-8b-instant
-OUTPUT_DIR=output
-```
-
-Now choose one provider combination and set the variables.
-
-#### Example A: OpenAI for both STT and LLM
-
-```env
-OPENAI_API_KEY=your_openai_key_here
-STT_PROVIDER=openai
-LLM_PROVIDER=openai
-OPENAI_MODEL=gpt-4o-mini
-OUTPUT_DIR=output
-```
-
-#### Example B: OpenAI STT + local Ollama LLM
-
-```env
-OPENAI_API_KEY=your_openai_key_here
-STT_PROVIDER=openai
-LLM_PROVIDER=ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1:8b
-OUTPUT_DIR=output
-```
-
-#### Example C: Groq for both STT and LLM
-
-```env
-GROQ_API_KEY=your_groq_key_here
-STT_PROVIDER=groq
-LLM_PROVIDER=groq
-GROQ_MODEL=llama-3.1-8b-instant
-OUTPUT_DIR=output
-```
 
 ## Extra step only if you use Ollama
 
@@ -263,6 +181,10 @@ curl http://localhost:11434/api/tags
 
 If you get a response, Ollama is reachable.
 
+
+
+
+
 ## Run the app
 
 Make sure:
@@ -284,13 +206,8 @@ Streamlit will print a local URL, usually:
 
 Open that URL in your browser.
 
-## Run the automated tests
 
-To verify the app�s edge-case handling locally:
 
-```bash
-python -m unittest discover -s tests -v
-```
 
 ## How to use the app
 
@@ -314,16 +231,6 @@ python -m unittest discover -s tests -v
 5. Confirm if required.
 6. Check the result in the UI and in `output/`.
 
-## Example prompts to test
-
-You can test the app using audio commands like:
-
-- `Create a file called notes.txt`
-- `Create a folder called project_docs`
-- `Create a Python file called retry.py with a retry decorator`
-- `Create a C plus plus file called max_element.cpp with code to find the maximum element in an array`
-- `Summarize this text: Python is a high-level programming language used for web apps, AI, automation, and scripting.`
-- `What can you do for me?`
 
 ## Where generated files go
 
@@ -335,93 +242,23 @@ output/
 
 This is intentional for safety. The app will reject paths that try to escape this directory.
 
-## Common issues and fixes
-
-### Error: `OPENAI_API_KEY is required`
-
-Cause:
-
-- you selected `openai` as a provider but did not set `OPENAI_API_KEY`
-
-Fix:
-
-- add your key to `.env`
-- restart the app
-
-### Error: `GROQ_API_KEY is required`
-
-Cause:
-
-- you selected `groq` as a provider but did not set `GROQ_API_KEY`
-
-Fix:
-
-- add your key to `.env`
-- restart the app
-
-### Error connecting to Ollama
-
-Cause:
-
-- Ollama is not running
-- the local URL is wrong
-- the model has not been pulled
-
-Fix:
-
-- run `ollama pull llama3.1:8b`
-- make sure Ollama is running
-- confirm `OLLAMA_BASE_URL=http://localhost:11434`
-
-### `streamlit: command not found`
-
-Cause:
-
-- virtual environment is not activated
-- dependencies were not installed
-
-Fix:
-
-- activate `.venv`
-- run `pip install -r requirements.txt`
-
-### The app opens but fails when I click `Run Agent`
-
-Cause:
-
-- missing API key
-- Ollama not running
-- invalid audio file
-
-Fix:
-
-- check `.env`
-- check provider choice
-- check that your uploaded file is a valid audio file
-- read the exact error shown in the Streamlit UI
-
-## Notes on local vs API models
-
-The assignment prefers local models. This implementation supports local intent classification through Ollama. Speech-to-text currently uses API-based providers because local Whisper-class models can be heavy on CPU/RAM for modest hardware. If you submit with API STT, mention that hardware tradeoff in your final README/article/demo.
 
 ## Quick run checklist
 
 Before running, confirm all of these:
 
 - you are inside the project directory
-- `.venv` exists
-- `.venv` is activated
+- `voice-agent` exists (or `.venv`)
+- `voice-agent` is activated
 - dependencies are installed
 - `.env` exists
 - provider keys are filled in
 - if using Ollama, the server is running and the model is pulled
 - you start the app with `streamlit run app.py`
 
-## Deliverables still to complete
 
-After the app is working, you still need:
+## Notes on local vs API models
 
-- a public GitHub repo
-- a 2 to 3 minute demo video
-- a technical article
-- submission through the official form
+The assignment prefers local models. This implementation supports local intent classification through Ollama. Speech-to-text currently uses API-based providers because local Whisper-class models can be heavy on CPU/RAM for modest hardware.Ollama is used for local inference to ensure privacy and avoid API costs, although cloud-based models may offer lower latency
+
+---
