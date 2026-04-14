@@ -1,0 +1,36 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+.pdfenv/
+venv/
+env/
+
+# Environment secrets
+.env
+
+# Streamlit and local app state
+.streamlit/
+voice_agent_uploads/
+
+# Generated output
+output/*
+!output/.gitkeep
+
+# Test / coverage artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*Zone.Identifier
