@@ -1,8 +1,3 @@
-Items not included in the codebase because they are submission deliverables rather than runtime features:
-
-- 2 to 3 minute demo video
-- Final form submission
-
 # Voice-Controlled Local AI Agent
 
 A local AI agent that accepts voice input, understands user intent using LLMs, and executes real actions like file creation, code generation, summarization, and general chat — all through a clean UI.
