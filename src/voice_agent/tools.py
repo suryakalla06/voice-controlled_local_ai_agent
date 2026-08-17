@@ -122,20 +122,35 @@ class ToolExecutor:
         return stripped + ("\n" if stripped else "")
 
     def _finalize_cpp(self, content: str) -> tuple[str, str]:
+        """Return compilable C++, or refuse.
+
+        This used to fall back to a canned max-element program when repair
+        failed, so that the UI always had something to show. That was the wrong
+        trade: the fallback is unrelated to what the user asked for, and writing
+        it to their requested filename makes a wrong answer look like a right
+        one. Nothing is written now unless g++ accepted this specific content.
+        app.py already surfaces the raise as an error message, so refusing costs
+        a clear failure rather than a crash.
+        """
         candidate = self._repair_cpp(content)
         if self._cpp_compiles(candidate):
             return candidate, "validated with g++"
 
-        fallback = self._cpp_fallback_program(content)
-        if self._cpp_compiles(fallback):
-            return fallback, "repaired and validated with g++"
-
-        raise ValueError("Generated C++ code is invalid even after repair.")
+        raise ValueError(
+            "Refusing to write: the generated C++ does not compile under "
+            "g++ -std=c++17, even after repairing includes and adding a main(). "
+            "Nothing was written. Try rephrasing the request."
+        )
 
     def _repair_cpp(self, content: str) -> str:
         stripped = content.strip()
         if not stripped:
-            return self._cpp_fallback_program(content)
+            # Empty generation is a failure to report, not a gap to fill in with
+            # a program the user never asked for.
+            raise ValueError(
+                "Refusing to write: the model returned no C++ content. "
+                "Nothing was written."
+            )
 
         if "main(" in stripped:
             return self._ensure_cpp_includes(stripped)
@@ -193,22 +208,6 @@ class ToolExecutor:
         lines = [line for line in content.splitlines() if line.strip()]
         existing = {line.strip() for line in lines if line.strip().startswith("#include")}
         return [include for include in required_includes if include not in existing]
-
-    @staticmethod
-    def _cpp_fallback_program(_: str) -> str:
-        return (
-            "#include <algorithm>\n"
-            "#include <iostream>\n"
-            "#include <vector>\n\n"
-            "int main() {\n"
-            "    std::vector<int> arr = {3, 1, 4, 2, 5};\n"
-            "    auto max_it = std::max_element(arr.begin(), arr.end());\n\n"
-            "    if (max_it != arr.end()) {\n"
-            "        std::cout << \"Maximum element: \" << *max_it << '\\n';\n"
-            "    }\n\n"
-            "    return 0;\n"
-            "}\n"
-        )
 
     @staticmethod
     def _cpp_compiles(content: str) -> bool:

@@ -138,10 +138,12 @@ write C++ it has not proved compiles:
 candidate = self._repair_cpp(content)
 if self._cpp_compiles(candidate):
     return candidate, "validated with g++"
-fallback = self._cpp_fallback_program(content)
-if self._cpp_compiles(fallback):
-    return fallback, "repaired and validated with g++"
-raise ValueError("Generated C++ code is invalid even after repair.")
+
+raise ValueError(
+    "Refusing to write: the generated C++ does not compile under "
+    "g++ -std=c++17, even after repairing includes and adding a main(). "
+    "Nothing was written. Try rephrasing the request."
+)
 ```
 
 `_cpp_compiles` shells out to `g++ -std=c++17` in a `TemporaryDirectory` with a
@@ -150,10 +152,21 @@ for `std::vector`, `std::map`, `std::unordered_map`, `std::array`,
 `max_element`, `cout` and prepends whatever includes are missing; if there is no
 `main()`, it wraps the fragment in one.
 
-The ladder is deliberate — **repair, then fall back, then refuse**. It never
-writes unvalidated C++, and it never silently writes something unrelated to what
-was asked without saying so: the return message carries `validated with g++` or
-`repaired and validated with g++` so the user knows which happened.
+The ladder is exactly two rungs — **repair, then refuse.** There is deliberately
+no third.
+
+An earlier version had one: when repair failed it wrote a canned max-element
+program so the UI always had something to show. That was the wrong trade. The
+fallback bore no relation to what was asked, and writing it to the user's
+requested filename made a failed generation look like a successful one — the
+label in the return message was the only thing distinguishing them, and a label
+is not much to hang that on. Substituting an answer is worse than admitting there
+isn't one, so it now raises, `app.py` renders the message as an error, and
+nothing reaches disk. Empty generations are refused on the same grounds.
+
+Two tests pin this: `test_uncompilable_cpp_is_refused_and_nothing_is_written`
+asserts both the raise and the absence of the file, and
+`test_empty_cpp_generation_is_refused` covers the empty case.
 
 ### 4.4 Three providers behind one interface, local by default
 
@@ -211,16 +224,18 @@ What the repository demonstrably does:
 | | |
 |---|---|
 | Source files | 10, across `src/voice_agent/` and `tests/` |
-| Test functions | **20** — 15 on tools, 5 on intent normalisation |
+| Test functions | **22** — 17 on tools, 5 on intent normalisation |
 | Intent types | 6, closed enum |
 | LLM providers | 3, interchangeable (Ollama local by default) |
 | STT providers | 2 |
 | Sandbox escapes possible via path input | none found; blocked by resolve-and-assert |
 | C++ written without compiling | none; `_finalize_cpp` raises instead |
+| C++ substituted for what was asked | none; no fallback program exists |
 
-The test suite is concentrated where the risk is. Of the 15 tool tests, the ones
-that matter most are the path-escape block, the placeholder flattening, and the
-two C++ tests that assert a fragment is repaired into something `g++` accepts.
+The test suite is concentrated where the risk is. Of the 17 tool tests, the ones
+that matter most are the path-escape block, the placeholder flattening, the two
+that assert a fragment is repaired into something `g++` accepts, and the two that
+assert unsalvageable input is refused with nothing written.
 
 **No performance figures appear here** because the repository contains no
 benchmark. Latency is dominated by the STT call and by local model inference,
@@ -230,33 +245,31 @@ neither of which is measured.
 
 ## 6. Limitations
 
-1. **`_cpp_fallback_program` returns a fixed max-element program.** If repair
-   fails, the fallback writes a canned program unrelated to the request. It is
-   labelled in the return message, but a user skimming output could mistake it
-   for their answer. Refusing outright would be more honest than substituting.
-2. **Validation is C++-only.** Python, JavaScript, TypeScript, Java, Rust and Go
+1. **Validation is C++-only.** Python, JavaScript, TypeScript, Java, Rust and Go
    are all accepted in `_extension` and written unchecked. A syntax check per
    language — even just `ast.parse` for Python — would close most of the gap.
-3. **The sandbox protects paths, not content.** Generated code is never run, so
+   This is now the largest hole in the safety model, since C++ is the one
+   language that cannot be written unvalidated.
+2. **The sandbox protects paths, not content.** Generated code is never run, so
    this is currently fine; the moment execution is added the threat model needs
    rebuilding from scratch.
-4. **Session memory only.** State lives in the Streamlit session and is lost on
+3. **Session memory only.** State lives in the Streamlit session and is lost on
    reload.
-5. **No test covers the provider call paths.** All 5 LLM tests exercise the
+4. **No test covers the provider call paths.** All 5 LLM tests exercise the
    normalisation helpers; the three `classify` branches are untested, so a
    provider-side API change would surface only at runtime.
-6. **`_sanitize_relative_path` flattens anything deeper than two levels**, which
+5. **`_sanitize_relative_path` flattens anything deeper than two levels**, which
    is a heuristic that will occasionally destroy a legitimate nested path the
    user genuinely wanted.
-7. **No structured logging.** Debugging a bad intent means re-running it.
+6. **No structured logging.** Debugging a bad intent means re-running it.
 
 ## 7. What I would do next
 
-1. Replace the canned C++ fallback with an explicit refusal (§6.1).
-2. Add `ast.parse` validation for Python, matching the C++ ladder.
-3. Test the three provider paths against recorded responses.
-4. Log transcript → raw JSON → normalised intent → action for every run.
-5. Distinguish "flattened a placeholder path" from "flattened your real path" in
+1. Add `ast.parse` validation for Python, matching the C++ ladder — now the
+   biggest remaining gap (§6.1).
+2. Test the three provider paths against recorded responses.
+3. Log transcript → raw JSON → normalised intent → action for every run.
+4. Distinguish "flattened a placeholder path" from "flattened your real path" in
    the message shown to the user.
 
 ---
@@ -271,7 +284,7 @@ cp .env.example .env          # then fill in keys
 ollama pull llama3.1:8b
 
 streamlit run app.py
-pytest                        # 20 tests
+pytest                        # 22 tests
 ```
 
 Configuration is entirely environment-driven — `STT_PROVIDER`, `LLM_PROVIDER`,

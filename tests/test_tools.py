@@ -111,6 +111,41 @@ class ToolExecutorTests(unittest.TestCase):
         self.assertIn("#include <array>", written)
         self.assertIn("#include <algorithm>", written)
 
+    def test_uncompilable_cpp_is_refused_and_nothing_is_written(self) -> None:
+        """C++ that cannot be salvaged must not be replaced by other code.
+
+        Regression test: this previously wrote a canned max-element program to
+        the requested path, so a failed generation looked like a successful one.
+        """
+        intent = IntentResult(
+            intents=["write_code"],
+            primary_intent="write_code",
+            target_path="broken.cpp",
+            content="int main() { this is not c++ at all ;;; }",
+            language="cpp",
+        )
+
+        with self.assertRaises(ValueError) as ctx:
+            self.executor.execute(intent)
+
+        self.assertIn("Refusing to write", str(ctx.exception))
+        self.assertFalse((self.output_dir / "broken.cpp").exists())
+
+    def test_empty_cpp_generation_is_refused(self) -> None:
+        intent = IntentResult(
+            intents=["write_code"],
+            primary_intent="write_code",
+            target_path="empty.cpp",
+            content="   \n  ",
+            language="cpp",
+        )
+
+        with self.assertRaises(ValueError) as ctx:
+            self.executor.execute(intent)
+
+        self.assertIn("no C++ content", str(ctx.exception))
+        self.assertFalse((self.output_dir / "empty.cpp").exists())
+
     def test_cpp_map_code_gets_required_includes(self) -> None:
         intent = IntentResult(
             intents=["write_code"],
